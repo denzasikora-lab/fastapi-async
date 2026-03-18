@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">💰 Finance Tracker</h1>
+
+        <!-- Registration / Login -->
+        <div id="authSection" class="card mb-4">
+            <div class="card-body">
+                <h3 class="card-title">Sign in</h3>
+                <div class="mb-3">
+                    <label for="username" class="form-label">Your login</label>
+                    <input type="text" class="form-control" id="username" placeholder="Enter login">
+                </div>
+                <button onclick="register()" class="btn btn-primary me-2">✨ Register</button>
+                <button onclick="login()" class="btn btn-success">🔑 Sign in</button>
+            </div>
+        </div>
+
+        <!-- Main UI -->
+        <div id="mainSection" style="display: none;">
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <span>Welcome, <strong id="currentUser"></strong>!</span>
+                <button onclick="logout()" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">🚪</button>
+            </div>
+
+            <!-- Total balance -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">📊 Your balance</h4>
+                    <div id="totalBalance" class="display-4 text-primary">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
+                        💼 Add wallet
+                    </button>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
+                        ➕ Income
+                    </button>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        ➖ Expense
+                    </button>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#transferModal">
+                        🔄 Transfer
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#reportModal">
+                        📊 Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Wallets table -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">💳 My wallets</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Currency</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="walletsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent operations -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">📋 Recent operations</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Wallet</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add wallet modal -->
+    <div class="modal fade" id="addWalletModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">💼 New wallet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" id="walletName" placeholder="My card">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Currency</label>
+                        <select class="form-select" id="walletCurrency">
+                            <option value="usd">USD</option>
+                            <option value="eur">EUR</option>
+                            <option value="rub">RUB</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Initial balance</label>
+                        <input type="number" class="form-control" id="walletBalance" value="0" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addWallet()">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add income modal -->
+    <div class="modal fade" id="addIncomeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ Add income</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Wallet</label>
+                        <select class="form-select" id="incomeWallet"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-control" id="incomeAmount" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" id="incomeDescription" placeholder="Salary">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="addIncome()">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add expense modal -->
+    <div class="modal fade" id="addExpenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➖ Add expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Wallet</label>
+                        <select class="form-select" id="expenseWallet"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-control" id="expenseAmount" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <input type="text" class="form-control" id="expenseCategory" placeholder="Food">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" id="expenseDescription" placeholder="Lunch">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="addExpense()">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer modal -->
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🔄 Transfer money</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">From</label>
+                        <select class="form-select" id="transferFrom"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">To</label>
+                        <select class="form-select" id="transferTo"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-control" id="transferAmount" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-info" onclick="transfer()">Transfer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report modal -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📊 Finance report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">From</label>
+                            <input type="date" class="form-control" id="reportDateFrom">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">To</label>
+                            <input type="date" class="form-control" id="reportDateTo">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-4" onclick="loadReport()">📈 Generate report</button>
+                    
+                    <div id="reportContent" style="display: none;">
+                        <h5 class="mb-3">Operations for the selected period:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Wallet</th>
+                                        <th>Category</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toastNotification" class="toast" role="alert">
+            <div class="toast-header">
+                <strong class="me-auto" id="toastTitle">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastBody">
+                Message
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/bootstrap.bundle.min.js"></script>
+    <script src="./js/app.js"></script>
+    <script>
+        document.getElementById('reportModal').addEventListener('show.bs.modal', initReportDates);
+        
+        document.getElementById('addIncomeModal').addEventListener('show.bs.modal', function() {
+            updateWalletSelects();
+        });
+        
+        document.getElementById('addExpenseModal').addEventListener('show.bs.modal', function() {
+            updateWalletSelects();
+        });
+        
+        document.getElementById('transferModal').addEventListener('show.bs.modal', function() {
+            updateWalletSelects();
+        });
+        
+        // Reset forms when modals are closed
+        document.getElementById('addWalletModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('walletName').value = '';
+            document.getElementById('walletCurrency').value = 'rub';
+            document.getElementById('walletBalance').value = '0';
+        });
+        
+        document.getElementById('addIncomeModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('incomeAmount').value = '';
+            document.getElementById('incomeDescription').value = '';
+        });
+        
+        document.getElementById('addExpenseModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseCategory').value = '';
+            document.getElementById('expenseDescription').value = '';
+        });
+        
+        document.getElementById('transferModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('transferAmount').value = '';
+        });
+        
+        document.getElementById('reportModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('reportContent').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
