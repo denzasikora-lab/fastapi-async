@@ -49,6 +49,28 @@ Run tests:
 poetry run pytest -q
 ```
 
+### uv (fast alternative)
+
+If you have `uv` installed (or install it via `pip install uv` / `poetry add -G dev uv`):
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+```
+
+Run the app:
+
+```bash
+uv run uvicorn main:app --reload
+```
+
+Run tests:
+
+```bash
+uv run pytest -q
+```
+
 ### pip + venv (alternative)
 
 ```bash
