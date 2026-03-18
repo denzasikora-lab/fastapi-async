@@ -29,6 +29,28 @@ Finance Tracker API built with FastAPI + SQLAlchemy (SQLite) with a small static
 
 ## Setup
 
+### Poetry (recommended)
+
+Install Poetry (see docs) and then:
+
+```bash
+poetry install
+```
+
+Run the app:
+
+```bash
+poetry run uvicorn main:app --reload
+```
+
+Run tests:
+
+```bash
+poetry run pytest -q
+```
+
+### pip + venv (alternative)
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
