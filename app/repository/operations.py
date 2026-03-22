@@ -1,14 +1,15 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum
 from app.models import Operation
 
 
-def create_operation(
-    db: Session,
+async def create_operation(
+    db: AsyncSession,
     wallet_id: int,
     type: str,
     amount: Decimal,
@@ -41,11 +42,11 @@ def create_operation(
         subcategory=subcategory,  # Subcategory
     )
     db.add(operation)  # Add operation to the DB session
-    db.flush()  # Flush changes (without committing)
+    await db.flush()  # Flush changes (without committing)
     return operation  # Return created operation
 
-def get_operations_list(
-    db: Session,
+async def get_operations_list(
+    db: AsyncSession,
     wallets_ids: list[int],  # Wallet ids to filter by
     date_from: datetime | None,  # Optional start date filter
     date_to: datetime | None,  # Optional end date filter
@@ -62,17 +63,16 @@ def get_operations_list(
     Returns:
         List of operations that match the filters
     """
-    # Start a query against the operations table
-    # Filter operations by wallet ids
-    query = db.query(Operation).filter(Operation.wallet_id.in_(wallets_ids))
+    stmt = select(Operation).where(Operation.wallet_id.in_(wallets_ids))
 
     # If start date provided, filter by operation creation date
     if date_from:
-        query = query.filter(Operation.created_at >= date_from)
+        stmt = stmt.where(Operation.created_at >= date_from)
 
     # If end date provided, filter by operation creation date
     if date_to:
-        query = query.filter(Operation.created_at <= date_to)
+        stmt = stmt.where(Operation.created_at <= date_to)
 
     # Return all matched operations
-    return query.all()
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

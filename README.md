@@ -34,6 +34,7 @@ Finance Tracker API built with FastAPI + SQLAlchemy (SQLite) with a small static
 Install Poetry (see docs) and then:
 
 ```bash
+cp .env.example .env
 poetry install
 ```
 
@@ -54,6 +55,7 @@ poetry run pytest -q
 If you have `uv` installed (or install it via `pip install uv` / `poetry add -G dev uv`):
 
 ```bash
+cp .env.example .env
 uv venv
 source .venv/bin/activate
 uv pip install -r requirements.txt
@@ -74,6 +76,7 @@ uv run pytest -q
 ### pip + venv (alternative)
 
 ```bash
+cp .env.example .env
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -83,6 +86,12 @@ pip install -r requirements.txt
 
 ```bash
 uvicorn main:app --reload
+```
+
+## Docker
+
+```bash
+docker compose up --build
 ```
 
 Open:

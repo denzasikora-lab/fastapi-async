@@ -1,64 +1,41 @@
-from typing import Generator
-
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from fastapi.testclient import TestClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base
 from app.dependency import get_db
 from main import app
 
-# SQLite test database connection URL
-TEST_DATABASE_URL = "sqlite:///./test.db"
+# SQLite test database connection URL (async)
+TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-# Create engine for the test database.
-# connect_args={"check_same_thread": False} allows one connection across threads (required for SQLite).
-test_engine = create_engine(TEST_DATABASE_URL,
-                            connect_args={"check_same_thread": False})
+test_engine = create_async_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 
-# Create a session factory for the test database.
-# autocommit=False: changes are not saved automatically; commit() is required.
-# autoflush=False: changes are not flushed automatically on queries.
-TestSessionLocal = sessionmaker(bind=test_engine,
-                                autocommit=False,
-                                autoflush=False)
+TestSessionLocal = async_sessionmaker(test_engine, expire_on_commit=False)
 
-# Dependency that provides a test database session
-def get_test_db() -> Generator[Session, None, None]:
-    # Create a new DB session
-    db = TestSessionLocal()
-    try:
-        # Yield the session (FastAPI will close it after request handling)
+async def get_test_db():
+    async with TestSessionLocal() as db:
         yield db
-    finally:
-        # Always close the session (even if an error occurs)
-        db.close()
 
 # Override get_db dependency for all tests
 app.dependency_overrides[get_db] = get_test_db
 
-@pytest.fixture()
-def client():
-    # Provide a FastAPI TestClient for HTTP requests in tests
-    yield TestClient(app)
+@pytest_asyncio.fixture()
+async def client() -> AsyncClient:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
 
-@pytest.fixture(autouse=True)
-def setup_db():
-    # Recreate all tables before each test
-    Base.metadata.create_all(bind=test_engine)
+@pytest_asyncio.fixture(autouse=True)
+async def setup_db():
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield
-    # Drop all tables after each test (cleanup)
-    Base.metadata.drop_all(bind=test_engine)
 
-@pytest.fixture
-def db_session()-> Generator[Session, None, None]:
-    # Create a new DB session
-    db = TestSessionLocal()
-    try:
-        # Yield the session (FastAPI will close it after request handling)
+@pytest_asyncio.fixture
+async def db_session() -> AsyncSession:
+    async with TestSessionLocal() as db:
         yield db
-    finally:
-        # Always close the session (even if an error occurs)
-        db.close()
 

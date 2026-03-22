@@ -3,8 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from fastapi import HTTPException
-# Import Session for database access
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import OperationType
 from app.models import User
@@ -16,7 +15,7 @@ from app.repository import operations as operations_repository
 from app.service.exchange_service import get_exchange_rate
 
 
-def add_income(db: Session, current_user: User, operation: OperationRequest) -> OperationResponse:
+async def add_income(db: AsyncSession, current_user: User, operation: OperationRequest) -> OperationResponse:
     """
     Add income to a wallet balance, validating that the wallet exists.
     
@@ -32,7 +31,7 @@ def add_income(db: Session, current_user: User, operation: OperationRequest) -> 
         HTTPException: If the wallet is not found
     """
     # Ensure the wallet exists
-    if not wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
+    if not await wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
         raise HTTPException(
             status_code=404,
             detail=f"Wallet '{operation.wallet_name}' not found"
@@ -40,9 +39,9 @@ def add_income(db: Session, current_user: User, operation: OperationRequest) -> 
 
     # amount > 0 validation is handled by OperationRequest
     # Add income to the wallet balance via the repository
-    wallet = wallets_repository.add_income(db, current_user.id, operation.wallet_name, operation.amount)
+    wallet = await wallets_repository.add_income(db, current_user.id, operation.wallet_name, operation.amount)
     # Create an income operation record via the repository
-    operation = operations_repository.create_operation(
+    operation_row = await operations_repository.create_operation(
         db=db,
         wallet_id=wallet.id,  # Wallet id
         type=OperationType.INCOME,  # Operation type
@@ -51,11 +50,11 @@ def add_income(db: Session, current_user: User, operation: OperationRequest) -> 
         category=operation.description,  # Category (from description)
     )
     # Persist changes
-    db.commit()
+    await db.commit()
     # Return operation info
-    return OperationResponse.model_validate(operation)
+    return OperationResponse.model_validate(operation_row)
 
-def add_expense(db: Session, current_user: User, operation: OperationRequest) -> OperationResponse:
+async def add_expense(db: AsyncSession, current_user: User, operation: OperationRequest) -> OperationResponse:
     """
     Subtract an expense from a wallet balance, validating that the wallet exists and has enough funds.
     
@@ -71,7 +70,7 @@ def add_expense(db: Session, current_user: User, operation: OperationRequest) ->
         HTTPException: If the wallet is not found or there are insufficient funds
     """
     # Ensure the wallet exists
-    if not wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
+    if not await wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
         raise HTTPException(
             status_code=404,
             detail=f"Wallet '{operation.wallet_name}' not found"
@@ -81,7 +80,9 @@ def add_expense(db: Session, current_user: User, operation: OperationRequest) ->
 
     # Check if there are enough funds (business logic, not validation!)
     # Get current wallet balance via the repository
-    wallet = wallets_repository.get_wallet_balance_by_name(db, current_user.id, operation.wallet_name)
+    wallet = await wallets_repository.get_wallet_balance_by_name(db, current_user.id, operation.wallet_name)
+    if wallet is None:
+        raise HTTPException(status_code=404, detail=f"Wallet '{operation.wallet_name}' not found")
     if wallet.balance < operation.amount:  # Balance is less than the expense amount
         raise HTTPException(
             status_code=400,
@@ -89,9 +90,9 @@ def add_expense(db: Session, current_user: User, operation: OperationRequest) ->
         )  # Not enough money -> 400
 
     # Subtract expense from wallet balance via the repository
-    wallet = wallets_repository.add_expense(db, current_user.id, operation.wallet_name, operation.amount)
+    wallet = await wallets_repository.add_expense(db, current_user.id, operation.wallet_name, operation.amount)
     # Create an expense operation record via the repository
-    operation = operations_repository.create_operation(
+    operation_row = await operations_repository.create_operation(
         db=db,
         wallet_id=wallet.id,  # Wallet id
         type=OperationType.EXPENSE,  # Operation type
@@ -100,13 +101,13 @@ def add_expense(db: Session, current_user: User, operation: OperationRequest) ->
         category=operation.description,  # Category (from description)
     )
     # Persist changes
-    db.commit()
+    await db.commit()
     # Return operation info
-    return OperationResponse.model_validate(operation)
+    return OperationResponse.model_validate(operation_row)
 
 
-def get_operations_list(
-    db: Session,
+async def get_operations_list(
+    db: AsyncSession,
     current_user: User,
     wallet_id: int | None = None,  # Optional wallet id filter
     date_from: datetime | None = None,  # Optional start date filter
@@ -131,7 +132,7 @@ def get_operations_list(
     # If a wallet id is provided, filter by that wallet
     if wallet_id:
         # Fetch the wallet via the repository
-        wallet = wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id)
+        wallet = await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id)
         # Ensure the wallet exists
         if not wallet:
             raise HTTPException(
@@ -143,12 +144,12 @@ def get_operations_list(
         wallets_ids = [wallet.id]
     else:
         # Otherwise, include all user wallets
-        wallets = wallets_repository.get_all_wallets(db, current_user.id)
+        wallets = await wallets_repository.get_all_wallets(db, current_user.id)
         # Build the list of wallet ids
         wallets_ids = [w.id for w in wallets]
 
     # Fetch operations list from the repository with filters
-    operations = operations_repository.get_operations_list(
+    operations = await operations_repository.get_operations_list(
         db,
         wallets_ids,  # Wallet ids to filter by
         date_from,  # Start date filter
@@ -162,7 +163,7 @@ def get_operations_list(
 
 
 async def transfer_between_wallets(
-    db: Session, user_id: int, from_wallet_id: int, to_wallet_id: int, amount: Decimal,
+    db: AsyncSession, user_id: int, from_wallet_id: int, to_wallet_id: int, amount: Decimal,
 ) -> OperationResponse:
     """
     Transfer money between a user's wallets with currency conversion when needed.
@@ -181,9 +182,9 @@ async def transfer_between_wallets(
         HTTPException: If a wallet is not found or there are insufficient funds
     """
     # Fetch the sender wallet via the repository
-    from_wallet = wallets_repository.get_wallet_by_id(db, user_id, from_wallet_id)
+    from_wallet = await wallets_repository.get_wallet_by_id(db, user_id, from_wallet_id)
     # Fetch the recipient wallet via the repository
-    to_wallet = wallets_repository.get_wallet_by_id(db, user_id, to_wallet_id)
+    to_wallet = await wallets_repository.get_wallet_by_id(db, user_id, to_wallet_id)
 
     # Ensure both wallets exist
     if not from_wallet or not to_wallet:
@@ -212,7 +213,7 @@ async def transfer_between_wallets(
     # Add to recipient wallet (after conversion if needed)
     to_wallet.balance = to_wallet.balance + target_amount
     # Create a transfer operation record via the repository
-    operation = operations_repository.create_operation(
+    operation_row = await operations_repository.create_operation(
         db=db,
         wallet_id=from_wallet.id,  # Sender wallet id
         type=OperationType.TRANSFER,  # Operation type
@@ -222,6 +223,6 @@ async def transfer_between_wallets(
     )
     db.add(from_wallet)  # Add updated sender wallet to the session
     db.add(to_wallet)  # Add updated recipient wallet to the session
-    db.add(operation)  # Add operation to the session
-    db.commit()  # Persist changes
-    return OperationResponse.model_validate(operation)  # Return operation info
+    db.add(operation_row)  # Add operation to the session
+    await db.commit()  # Persist changes
+    return OperationResponse.model_validate(operation_row)  # Return operation info

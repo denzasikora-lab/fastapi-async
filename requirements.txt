@@ -2,8 +2,13 @@ fastapi==0.125.0
 uvicorn==0.38.0
 pydantic==2.12.5
 sqlalchemy==2.0.45
-pytest==9.0.2
+pytest>=8.2,<9
 httpx==0.28.1
 requests==2.32.5
 aiohttp==3.13.2
 uv==0.8.13
+aiosqlite==0.21.0
+pydantic-settings==2.10.1
+pytest-asyncio==0.26.0
+ruff==0.12.12
+mypy==1.18.2

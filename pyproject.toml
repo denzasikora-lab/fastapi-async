@@ -14,13 +14,40 @@ pydantic = "2.12.5"
 sqlalchemy = "2.0.45"
 requests = "2.32.5"
 aiohttp = "3.13.2"
+aiosqlite = "0.21.0"
+pydantic-settings = "2.10.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "9.0.2"
+pytest = ">=8.2,<9"
 httpx = "0.28.1"
 uv = "0.8.13"
+pytest-asyncio = "0.26.0"
+ruff = "0.12.12"
+mypy = "1.18.2"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = []
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+strict_equality = true
+ignore_missing_imports = true
 
